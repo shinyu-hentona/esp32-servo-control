@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ESP32 Servo Control with Timer</title>
+  <title>ESP32 Servo Control with Time-Based Timer</title>
   <style>
     body, html {
       height: 100%;
@@ -14,17 +14,26 @@
       background-color: #f5f5f5;
     }
 
-    #status {
-      margin-bottom: 20px;
+    #status, #timer-status {
+      margin-bottom: 10px;
       font-size: 1.2em;
     }
 
     button {
-      padding: 20px 40px;
-      font-size: 2em; /* 文字サイズを大きくする */
+      padding: 25px 50px; /* ボタンのパディングを増やす */
+      font-size: 2.5em; /* 文字サイズを大きくする */
       margin: 20px; /* 余白を調整する */
-      width: 80%; /* ボタンの幅を80%にする */
-      max-width: 400px; /* 最大幅を400pxに設定 */
+      width: 90%; /* ボタンの幅を90%にする */
+      max-width: 600px; /* 最大幅を600pxに設定 */
+      border: none;
+      border-radius: 10px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:active {
+      background-color: #0056b3;
     }
 
     label, input {
@@ -32,8 +41,9 @@
       margin: 10px;
     }
 
-    #timer {
-      width: 100px;
+    #timer-time {
+      font-size: 1.5em;
+      padding: 10px;
     }
   </style>
   <script>
@@ -47,91 +57,54 @@
   <button id="forward">正転</button>
   <button id="backward">逆転</button>
 
-  <label for="timer">タイマー（秒）:</label>
-  <input type="number" id="timer" min="1" value="5">
+  <label for="timer-time">タイマー時刻を設定:</label>
+  <input type="time" id="timer-time">
   <button id="setTimer">タイマーを設定</button>
+  <p id="timer-status">タイマー設定: 未設定</p>
 
   <script>
     let bleDevice;
     let bleCharacteristic;
+    let timerId = null;
 
-    document.getElementById('connect').addEventListener('click', function() {
-      connectBLE();
-    });
-
-    document.getElementById('forward').addEventListener('click', function() {
-      writeBLE("forward");
-    });
-
-    document.getElementById('backward').addEventListener('click', function() {
-      writeBLE("backward");
-    });
+    // 以前のスクリプトを省略
 
     document.getElementById('setTimer').addEventListener('click', function() {
-      const seconds = document.getElementById('timer').value;
-      setTimer(seconds);
+      const timeValue = document.getElementById('timer-time').value;
+      setTimer(timeValue);
     });
 
-    function connectBLE() {
-      console.log("接続ボタンがクリックされました。Bluetoothデバイスの接続を試みます。");
-      navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: [SERVICE_UUID]
-      })
-      .then(device => {
-        console.log(`デバイスが選択されました: ${device.name}`);
-        bleDevice = device;
-        updateStatus("接続中...");
-        return device.gatt.connect();
-      })
-      .then(server => {
-        console.log("デバイスへの接続に成功しました。");
-        updateStatus("サービスを検索中...");
-        return server.getPrimaryService(SERVICE_UUID);
-      })
-      .then(service => {
-        console.log("サービスが見つかりました。");
-        updateStatus("特性を検索中...");
-        return service.getCharacteristic(CHARACTERISTIC_UUID);
-      })
-      .then(characteristic => {
-        console.log("特性が見つかりました。");
-        bleCharacteristic = characteristic;
-        updateStatus("接続完了");
-      })
-      .catch(error => {
-        console.error("Bluetooth接続エラー: " + error);
-        updateStatus("接続エラー");
-      });
-    }
-
-    function writeBLE(value) {
-      if (!bleDevice || !bleDevice.gatt.connected || !bleCharacteristic) {
-        console.log("Bluetoothデバイスに接続されていません。接続を試みます。");
-        connectBLE();
-      } else {
-        console.log(`値（${value}）をESP32に送信します。`);
-        bleCharacteristic.writeValue(new TextEncoder().encode(value))
-        .then(() => {
-          console.log("データの送信に成功しました。");
-        })
-        .catch(error => {
-          console.error("データの送信に失敗しました: " + error);
-        });
+    function setTimer(timeValue) {
+      if (timerId) {
+        clearTimeout(timerId);
+        updateTimerStatus("タイマーがキャンセルされました。");
       }
-    }
 
-    function setTimer(seconds) {
-      console.log(`タイマーが設定されました: ${seconds}秒後に動作します。`);
-      setTimeout(function() {
-        writeBLE("forward"); // ここでは正転を例として使用
+      const [hours, minutes] = timeValue.split(':').map(Number);
+      const now = new Date();
+      const targetTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+
+      if (targetTime < now) {
+        // If the target time is in the past, set it for the next day
+        targetTime.setDate(targetTime.getDate() + 1);
+      }
+
+      const delay = targetTime - now;
+      timerId = setTimeout(function() {
+        writeBLE("forward"); // 例として正転を実行
         console.log("タイマーによりサーボが動作しました。");
-      }, seconds * 1000); // 秒をミリ秒に変換
+        updateTimerStatus("タイマーがトリガされました。");
+        timerId = null;
+      }, delay);
+
+      updateTimerStatus(`タイマーが設定されました: ${timeValue} に動作します。`);
     }
 
-    function updateStatus(status) {
-      document.getElementById('status').textContent = "接続ステータス: " + status;
+    function updateTimerStatus(status) {
+      document.getElementById('timer-status').textContent = "タイマー設定: " + status;
     }
+
+    // 以前のスクリプトを省略
   </script>
 </body>
 </html>
