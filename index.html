@@ -19,11 +19,11 @@
     }
 
     button {
-      padding: 25px 50px; /* ボタンのパディングを増やす */
-      font-size: 2em; /* 文字サイズを大きくする */
-      margin: 20px; /* 余白を調整する */
-      width: 90%; /* ボタンの幅を90%にする */
-      max-width: 600px; /* 最大幅を600pxに設定 */
+      padding: 25px 50px;
+      font-size: 2em;
+      margin: 20px;
+      width: 90%;
+      max-width: 600px;
     }
 
     label, input {
@@ -36,10 +36,6 @@
       padding: 10px;
     }
   </style>
-  <script>
-    const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-    const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
-  </script>
 </head>
 <body>
   <p id="status">接続ステータス: 切断</p>
@@ -53,18 +49,79 @@
   <p id="timer-status">タイマー設定: 未設定</p>
 
   <script>
-    let bleDevice;
-    let bleCharacteristic;
+    const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+    const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+    let bleDevice = null;
+    let bleCharacteristic = null;
     let timerId = null;
 
-    // 接続、BLE書き込み関数の実装は省略
+    document.getElementById('connect').addEventListener('click', function() {
+      connectBLE();
+    });
+
+    document.getElementById('forward').addEventListener('click', function() {
+      writeBLE("forward");
+    });
+
+    document.getElementById('backward').addEventListener('click', function() {
+      writeBLE("backward");
+    });
 
     document.getElementById('setTimer').addEventListener('click', function() {
       const timeValue = document.getElementById('timer-time').value;
       setTimer(timeValue);
     });
 
+    function connectBLE() {
+      console.log("Bluetoothデバイスへの接続を試みます...");
+      navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [SERVICE_UUID]
+      })
+      .then(device => {
+        bleDevice = device;
+        console.log(`デバイスを選択しました: ${device.name}`);
+        return device.gatt.connect();
+      })
+      .then(server => {
+        console.log("デバイスに接続しました。サービスを取得します...");
+        return server.getPrimaryService(SERVICE_UUID);
+      })
+      .then(service => {
+        console.log("サービスを取得しました。特性を取得します...");
+        return service.getCharacteristic(CHARACTERISTIC_UUID);
+      })
+      .then(characteristic => {
+        bleCharacteristic = characteristic;
+        console.log("特性を取得しました。接続完了！");
+        document.getElementById('status').textContent = "接続ステータス: 接続済み";
+      })
+      .catch(error => {
+        console.error("接続に失敗しました。", error);
+        document.getElementById('status').textContent = "接続ステータス: 接続失敗";
+      });
+    }
+
+    function writeBLE(value) {
+      if (!bleDevice || !bleDevice.gatt.connected || !bleCharacteristic) {
+        console.log("BLEデバイスが接続されていません。");
+      } else {
+        bleCharacteristic.writeValue(new TextEncoder().encode(value))
+        .then(() => {
+          console.log(`値 '${value}' をデバイスに書き込みました。`);
+        })
+        .catch(error => {
+          console.error("デバイスへの書き込みに失敗しました。", error);
+        });
+      }
+    }
+
     function setTimer(timeValue) {
+      if (!timeValue) {
+        alert("時間を設定してください。");
+        return;
+      }
+
       if (timerId) {
         clearTimeout(timerId);
         updateTimerStatus("タイマーがキャンセルされました。");
@@ -74,27 +131,21 @@
       const now = new Date();
       const targetTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
 
-      if (targetTime < now) {
-        // If the target time is in the past, set it for the next day
+      if (targetTime <= now) {
         targetTime.setDate(targetTime.getDate() + 1);
       }
 
-      const delay = targetTime - now;
-      timerId = setTimeout(function() {
-        writeBLE("forward"); // 例として正転を実行
-        console.log("タイマーによりサーボが動作しました。");
+      const delay = targetTime.getTime() - now.getTime();
+      updateTimerStatus(`タイマーが設定されました: ${targetTime}`);
+      timerId = setTimeout(() => {
+        writeBLE("forward");
         updateTimerStatus("タイマーがトリガされました。");
-        timerId = null;
       }, delay);
-
-      updateTimerStatus(`タイマーが設定されました: ${timeValue} に動作します。`);
     }
 
     function updateTimerStatus(status) {
-      document.getElementById('timer-status').textContent = "タイマー設定: " + status;
+      document.getElementById('timer-status').textContent = status;
     }
-
-    // 接続関数の実装は省略
   </script>
 </body>
 </html>
