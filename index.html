@@ -2,78 +2,69 @@
 <html>
 <head>
   <title>ESP32 Servo Control</title>
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+    }
+
+    #status {
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 20px 40px;
+      font-size: 1.5em;
+      margin: 10px;
+      width: 200px; /* ボタンの幅 */
+    }
+
+    #connect {
+      padding: 10px 20px;
+      font-size: 1em;
+      margin-bottom: 30px;
+    }
+  </style>
   <script>
-    // UUIDを設定
     const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
   </script>
 </head>
 <body>
+  <p id="status">接続ステータス: 切断</p>
+  <button id="connect">接続</button>
   <button id="forward">正転</button>
   <button id="backward">逆転</button>
-  <p id="status">接続ステータス: 切断</p>
 
   <script>
     let bleDevice;
     let bleCharacteristic;
 
+    document.getElementById('connect').addEventListener('click', function() {
+      connectBLE();
+    });
+
     document.getElementById('forward').addEventListener('click', function() {
-      console.log("正転ボタンが押されました。");
       writeBLE("forward");
     });
 
     document.getElementById('backward').addEventListener('click', function() {
-      console.log("逆転ボタンが押されました。");
       writeBLE("backward");
     });
 
     function connectBLE() {
-      console.log("Bluetoothデバイスの接続を試みます。");
-      navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: [SERVICE_UUID]
-      })
-      .then(device => {
-        console.log("デバイスが選択されました: " + device.name);
-        bleDevice = device;
-        updateStatus("接続中...");
-        return device.gatt.connect();
-      })
-      .then(server => {
-        console.log("デバイスへの接続に成功しました。");
-        updateStatus("サービスを検索中...");
-        return server.getPrimaryService(SERVICE_UUID);
-      })
-      .then(service => {
-        console.log("サービスが見つかりました。");
-        updateStatus("特性を検索中...");
-        return service.getCharacteristic(CHARACTERISTIC_UUID);
-      })
-      .then(characteristic => {
-        console.log("特性が見つかりました。");
-        bleCharacteristic = characteristic;
-        updateStatus("接続完了");
-      })
-      .catch(error => {
-        console.error("Bluetooth接続エラー: " + error);
-        updateStatus("接続エラー");
-      });
+      // 接続プロセス
+      // ...
     }
 
     function writeBLE(value) {
-      if (!bleDevice || !bleDevice.gatt.connected || !bleCharacteristic) {
-        console.log("Bluetoothデバイスに接続されていません。");
-        connectBLE();
-      } else {
-        console.log(`値（${value}）をESP32に送信します。`);
-        bleCharacteristic.writeValue(new TextEncoder().encode(value))
-        .then(() => {
-          console.log("データの送信に成功しました。");
-        })
-        .catch(error => {
-          console.error("データの送信に失敗しました: " + error);
-        });
-      }
+      // BLE経由で値を書き込む
+      // ...
     }
 
     function updateStatus(status) {
