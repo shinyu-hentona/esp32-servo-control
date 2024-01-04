@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP32 Servo Control</title>
+</head>
+<body>
+  <button id="forward">正転</button>
+  <button id="backward">逆転</button>
+
+  <script>
+    let bleDevice;
+    let bleCharacteristic;
+
+    document.getElementById('forward').addEventListener('click', function() {
+      writeBLE("forward");
+    });
+
+    document.getElementById('backward').addEventListener('click', function() {
+      writeBLE("backward");
+    });
+
+    function connectBLE() {
+      navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [SERVICE_UUID]
+      })
+      .then(device => {
+        bleDevice = device;
+        return device.gatt.connect();
+      })
+      .then(server => {
+        return server.getPrimaryService(SERVICE_UUID);
+      })
+      .then(service => {
+        return service.getCharacteristic(CHARACTERISTIC_UUID);
+      })
+      .then(characteristic => {
+        bleCharacteristic = characteristic;
+      })
+      .catch(error => {
+        console.log("Error: " + error);
+      });
+    }
+
+    function writeBLE(value) {
+      if (!bleDevice || !bleDevice.gatt.connected || !bleCharacteristic) {
+        connectBLE();
+      }
+      bleCharacteristic.writeValue(new TextEncoder().encode(value));
+    }
+  </script>
+</body>
+</html>
