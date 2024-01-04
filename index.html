@@ -8,31 +8,50 @@
       margin: 0;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: space-around; /* 上下に余白を持たせる */
       align-items: center;
       font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
     }
 
     #status, #timer-status {
       margin-bottom: 10px;
-      font-size: 1.2em;
+      font-size: 1.5em; /* 文字サイズを大きくする */
+      font-weight: bold; /* 文字を太字にする */
+    }
+
+    #status {
+      color: red; /* 初期状態を赤色にする */
+    }
+
+    .connected {
+      color: green; /* 接続済みを緑色にする */
     }
 
     button {
-      padding: 25px 50px;
-      font-size: 2em;
-      margin: 20px;
-      width: 90%;
-      max-width: 600px;
+      padding: 30px 60px; /* ボタンのパディングを増やす */
+      font-size: 2.5em; /* 文字サイズを大きくする */
+      margin: 10px 0; /* 上下の余白を設定 */
+      width: 80%; /* ボタンの幅を80%にする */
+      max-width: none; /* 最大幅の制限を解除 */
+      border: none;
+      border-radius: 10px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:active {
+      background-color: #0056b3;
     }
 
     label, input {
-      font-size: 1.2em;
+      font-size: 1.5em; /* 文字サイズを大きくする */
       margin: 10px;
     }
 
     #timer-time {
-      font-size: 1.5em;
+      font-size: 1.5em; /* 文字サイズを大きくする */
       padding: 10px;
     }
   </style>
@@ -95,6 +114,7 @@
         bleCharacteristic = characteristic;
         console.log("特性を取得しました。接続完了！");
         document.getElementById('status').textContent = "接続ステータス: 接続済み";
+        document.getElementById('status').classList.add('connected');
       })
       .catch(error => {
         console.error("接続に失敗しました。", error);
@@ -136,7 +156,7 @@
       }
 
       const delay = targetTime.getTime() - now.getTime();
-      updateTimerStatus(`タイマーが設定されました: ${targetTime}`);
+      updateTimerStatus(`タイマーが設定されました: ${targetTime.toLocaleTimeString()}`);
       timerId = setTimeout(() => {
         writeBLE("forward");
         updateTimerStatus("タイマーがトリガされました。");
