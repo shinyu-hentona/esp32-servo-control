@@ -3,7 +3,7 @@
 <head>
   <title>ESP32 Servo Control</title>
   <script>
-    // UUIDをESP32のコードで定義されたものに置き換えます
+    // UUIDを設定
     const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
   </script>
@@ -11,47 +11,73 @@
 <body>
   <button id="forward">正転</button>
   <button id="backward">逆転</button>
+  <p id="status">接続ステータス: 切断</p>
 
   <script>
     let bleDevice;
     let bleCharacteristic;
 
     document.getElementById('forward').addEventListener('click', function() {
+      console.log("正転ボタンが押されました。");
       writeBLE("forward");
     });
 
     document.getElementById('backward').addEventListener('click', function() {
+      console.log("逆転ボタンが押されました。");
       writeBLE("backward");
     });
 
     function connectBLE() {
+      console.log("Bluetoothデバイスの接続を試みます。");
       navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: [SERVICE_UUID]
       })
       .then(device => {
+        console.log("デバイスが選択されました: " + device.name);
         bleDevice = device;
+        updateStatus("接続中...");
         return device.gatt.connect();
       })
       .then(server => {
+        console.log("デバイスへの接続に成功しました。");
+        updateStatus("サービスを検索中...");
         return server.getPrimaryService(SERVICE_UUID);
       })
       .then(service => {
+        console.log("サービスが見つかりました。");
+        updateStatus("特性を検索中...");
         return service.getCharacteristic(CHARACTERISTIC_UUID);
       })
       .then(characteristic => {
+        console.log("特性が見つかりました。");
         bleCharacteristic = characteristic;
+        updateStatus("接続完了");
       })
       .catch(error => {
-        console.log("Error: " + error);
+        console.error("Bluetooth接続エラー: " + error);
+        updateStatus("接続エラー");
       });
     }
 
     function writeBLE(value) {
       if (!bleDevice || !bleDevice.gatt.connected || !bleCharacteristic) {
+        console.log("Bluetoothデバイスに接続されていません。");
         connectBLE();
+      } else {
+        console.log(`値（${value}）をESP32に送信します。`);
+        bleCharacteristic.writeValue(new TextEncoder().encode(value))
+        .then(() => {
+          console.log("データの送信に成功しました。");
+        })
+        .catch(error => {
+          console.error("データの送信に失敗しました: " + error);
+        });
       }
-      bleCharacteristic.writeValue(new TextEncoder().encode(value));
+    }
+
+    function updateStatus(status) {
+      document.getElementById('status').textContent = "接続ステータス: " + status;
     }
   </script>
 </body>
